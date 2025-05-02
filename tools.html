@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON to C# Converter</title>
+    <link href="https://unpkg.com/prismjs@1.23.0/themes/prism.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --background: #ffffff;
+            --text: #1f2937;
+            --border: #e5e7eb;
+            --card-bg: #f9fafb;
+        }
+
+        [data-theme="dark"] {
+            --primary: #3b82f6;
+            --background: #1f2937;
+            --text: #f9fafb;
+            --border: #374151;
+            --card-bg: #111827;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            height: 300px;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            background-color: var(--background);
+            color: var(--text);
+            font-family: 'Fira Code', monospace;
+            resize: vertical;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.375rem;
+            background-color: var(--primary);
+            color: white;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+        }
+
+        .error {
+            color: #ef4444;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.375rem;
+            background-color: #fef2f2;
+            display: none;
+        }
+
+        [data-theme="dark"] .error {
+            background-color: #450a0a;
+        }
+
+        .output-container {
+            position: relative;
+        }
+
+        .output-actions {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        input[type="text"] {
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 0.375rem;
+            background-color: var(--background);
+            color: var(--text);
+        }
+
+        .file-input {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-input input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="btn theme-toggle" onclick="toggleTheme()">🌓</button>
+        <div class="header">
+            <h1>JSON to C# Converter</h1>
+            <p>Convert JSON structures to C# classes instantly</p>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="controls">
+                    <div class="file-input btn">
+                        📁 Upload JSON
+                        <input type="file" id="fileInput" accept=".json">
+                    </div>
+                    <input type="text" id="rootClassName" placeholder="Root class name" value="RootObject">
+                </div>
+                <textarea id="jsonInput" placeholder="Paste JSON here..."></textarea>
+                <div class="controls">
+                    <button class="btn" onclick="convert()">🛠 Convert</button>
+                    <label class="btn">
+                        <input type="checkbox" id="includeAttributes" checked> Include [JsonProperty]
+                    </label>
+                </div>
+            </div>
+
+            <div class="card output-container">
+                <div class="output-actions">
+                    <button class="btn" onclick="copyToClipboard()">📋 Copy</button>
+                    <button class="btn" onclick="downloadCsFile()">💾 Download</button>
+                </div>
+                <pre><code id="output" class="language-csharp"></code></pre>
+            </div>
+        </div>
+
+        <div class="error" id="error"></div>
+    </div>
+
+    <script src="https://unpkg.com/prismjs@1.23.0/prism.js"></script>
+    <script>
+        // Theme handling
+        function toggleTheme() {
+            const theme = document.documentElement.getAttribute('data-theme');
+            const newTheme = theme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // File handling
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('jsonInput').value = e.target.result;
+                convert();
+            };
+            reader.readAsText(file);
+        });
+
+        // Conversion functions
+        function toPascalCase(str) {
+            return str.match(/[A-Za-z0-9]+/g)
+                .map(word => word[0].toUpperCase() + word.slice(1).toLowerCase())
+                .join('');
+        }
+
+        function generateClass(className, obj, classes, parentClassName) {
+            if (classes[className]) return;
+            
+            classes[className] = { properties: [] };
+            for (let key in obj) {
+                const value = obj[key];
+                const typeInfo = getCSharpType(value, key, classes, className);
+                
+                classes[className].properties.push({
+                    name: toPascalCase(key),
+                    type: typeInfo.type,
+                    originalName: key
+                });
+            }
+        }
+
+        function getCSharpType(value, key, classes, parentClassName) {
+            if (value === null) return { type: 'object', needsClass: false };
+            
+            if (Array.isArray(value)) {
+                if (value.length === 0) return { type: 'List<object>', needsClass: false };
+                const elementType = getCSharpType(value[0], key, classes, parentClassName);
+                return { 
+                    type: `List<${elementType.type}>`, 
+                    needsClass: elementType.needsClass 
+                };
+            }
+            
+            if (typeof value === 'object') {
+                const nestedClassName = parentClassName + toPascalCase(key);
+                if (!classes[nestedClassName]) {
+                    generateClass(nestedClassName, value, classes, nestedClassName);
+                }
+                return { type: nestedClassName, needsClass: true };
+            }
+            
+            return {
+                'string': { type: 'string', needsClass: false },
+                'number': { 
+                    type: Number.isInteger(value) ? 'int' : 'double', 
+                    needsClass: false 
+                },
+                'boolean': { type: 'bool', needsClass: false }
+            }[typeof value] || { type: 'object', needsClass: false };
+        }
+
+        function generateCSharpClasses(jsonObject, rootClassName) {
+            let classes = {};
+            
+            if (Array.isArray(jsonObject) {
+                if (jsonObject.length > 0) {
+                    generateClass(rootClassName, jsonObject[0], classes, rootClassName);
+                }
+            } else {
+                generateClass(rootClassName, jsonObject, classes, rootClassName);
+            }
+            
+            let code = '';
+            for (let className in classes) {
+                code += `public class ${className}\n{\n`;
+                for (let prop of classes[className].properties) {
+                    if (document.getElementById('includeAttributes').checked) {
+                        code += `    [JsonProperty("${prop.originalName}")]\n`;
+                    }
+                    code += `    public ${prop.type} ${prop.name} { get; set; }\n`;
+                }
+                code += '}\n\n';
+            }
+            
+            if (Array.isArray(jsonObject)) {
+                code = `public class ${rootClassName} : List<${rootClassName}>{}\n\n` + code;
+            }
+            
+            return code;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => errorDiv.style.display = 'none', 5000);
+        }
+
+        function convert() {
+            try {
+                const jsonInput = document.getElementById('jsonInput').value;
+                const json = jsonInput ? JSON.parse(jsonInput) : {};
+                const rootClassName = document.getElementById('rootClassName').value || 'RootObject';
+                const code = generateCSharpClasses(json, rootClassName);
+                
+                document.getElementById('output').textContent = code;
+                Prism.highlightElement(document.getElementById('output'));
+                document.getElementById('error').style.display = 'none';
+            } catch (e) {
+                showError(`Error: ${e.message}`);
+            }
+        }
+
+        async function copyToClipboard() {
+            try {
+                await navigator.clipboard.writeText(document.getElementById('output').textContent);
+                showError('Copied to clipboard!');
+            } catch (e) {
+                showError('Failed to copy text');
+            }
+        }
+
+        function downloadCsFile() {
+            const text = document.getElementById('output').textContent;
+            const rootName = document.getElementById('rootClassName').value || 'GeneratedClasses';
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${rootName}.cs`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        
+        // Initial conversion if needed
+        convert();
+    </script>
+</body>
+</html>
