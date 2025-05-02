@@ -2,10 +2,10 @@ function formatJSON() {
   const input = document.getElementById('jsonInput').value;
   const output = document.getElementById('jsonOutput');
   try {
-    const obj = JSON.parse(input);
-    output.textContent = JSON.stringify(obj, null, 2);
-  } catch (err) {
-    output.textContent = "❌ Invalid JSON:\n" + err.message;
+    const parsed = JSON.parse(input);
+    output.textContent = JSON.stringify(parsed, null, 2); // Pretty format with nesting
+  } catch (e) {
+    output.textContent = "❌ Invalid JSON:\n" + e.message;
   }
 }
 
@@ -13,10 +13,10 @@ function minifyJson() {
   const input = document.getElementById('jsonInput').value;
   const output = document.getElementById('jsonOutput');
   try {
-    const obj = JSON.parse(input);
-    output.textContent = JSON.stringify(obj);
-  } catch (err) {
-    output.textContent = "❌ Invalid JSON:\n" + err.message;
+    const parsed = JSON.parse(input);
+    output.textContent = JSON.stringify(parsed); // Minified version
+  } catch (e) {
+    output.textContent = "❌ Invalid JSON:\n" + e.message;
   }
 }
 
@@ -43,22 +43,26 @@ function handleFileUpload(event) {
 function loadSample() {
   const sample = [
     {
-      "planId": 1001,
-      "planName": "Basic Plan",
-      "price": 20,
-      "data": "5GB",
-      "minutes": 200,
-      "sms": 100,
-      "validity": "25 days"
+      "MainId": 1111,
+      "firstName": "Sherlock",
+      "lastName": "Homes",
+      "categories": [
+        {
+          "CategoryID": 1,
+          "CategoryName": "Example"
+        }
+      ]
     },
     {
-      "planId": 1002,
-      "planName": "Premium Plan",
-      "price": 40,
-      "data": "15GB",
-      "minutes": "Unlimited",
-      "sms": "Unlimited",
-      "validity": "30 days"
+      "MainId": 122,
+      "firstName": "James",
+      "lastName": "Watson",
+      "categories": [
+        {
+          "CategoryID": 2,
+          "CategoryName": "Example2"
+        }
+      ]
     }
   ];
   document.getElementById('jsonInput').value = JSON.stringify(sample, null, 2);
